@@ -20,7 +20,17 @@ export class Deck52Service implements DeckService {
     return cards;
   }
 
-  public drawCardsFromDeck(deck: Deck, count: number): { deck: Deck; drawnCards: DeckCard[] } {
-    return {deck, drawnCards: []};
+  /**
+   * @throws {Error}
+   */
+  public drawCardsFromDeck(
+    deck: Deck,
+    count: number,
+  ): {deck: Deck; drawnCards: DeckCard[]} {
+    if (count > deck.cards.length)
+      throw new Error('Count bigger than number of cards.');
+
+    const cards = deck.cards.splice(0, count);
+    return {deck: deck, drawnCards: cards};
   }
 }

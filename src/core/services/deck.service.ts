@@ -6,5 +6,11 @@ export interface DeckService {
 
   generateCardsForDeck(): DeckCard[];
 
-  drawCardsFromDeck(deck: Deck, count: number): {deck: Deck, drawnCards: DeckCard[]};
+  /**
+   * @throws {Error}
+   */
+  drawCardsFromDeck(
+    deck: Deck,
+    count: number,
+  ): {deck: Deck; drawnCards: DeckCard[]};
 }
