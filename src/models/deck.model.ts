@@ -1,4 +1,5 @@
 import {Entity, model, property} from '@loopback/repository';
+import {DeckCard} from '../core/entities/deck.card';
 
 @model({settings: {strict: false}})
 export class Deck extends Entity {
@@ -12,8 +13,15 @@ export class Deck extends Entity {
   @property({
     type: 'boolean',
     required: true,
+    default: false,
   })
   shuffled: boolean;
+
+  @property({
+    type: 'array',
+    itemType: 'object',
+  })
+  cards: DeckCard[];
 
   // Define well-known properties here
 

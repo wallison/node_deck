@@ -1,10 +1,5 @@
 import {
-  Count,
-  CountSchema,
-  Filter,
-  FilterExcludingWhere,
   repository,
-  Where,
 } from '@loopback/repository';
 import {
   post,
@@ -12,139 +7,82 @@ import {
   get,
   getModelSchemaRef,
   patch,
-  put,
-  del,
   requestBody,
   response,
 } from '@loopback/rest';
 import {Deck} from '../models';
 import {DeckRepository} from '../repositories';
+import {Deck52Service} from '../core/services/deck52.service';
+import {DeckService} from '../core/services/deck.service';
+import {OpenDeckResource} from '../core/resources/open.deck.resource';
+import {CreateDeckResource} from '../core/resources/create.deck.resource';
+import {DrawDeckResource} from '../core/resources/draw.deck.resource';
 
 export class DeckController {
+  private deckService: DeckService;
   constructor(
     @repository(DeckRepository)
-    public deckRepository : DeckRepository,
-  ) {}
+    public deckRepository: DeckRepository,
+  ) {
+    this.deckService = new Deck52Service();
+  }
 
-  @post('/decks')
+  @post('/deck-create')
   @response(200, {
     description: 'Deck model instance',
     content: {'application/json': {schema: getModelSchemaRef(Deck)}},
   })
-  async create(
-    @requestBody({
-      content: {
-        'application/json': {
-          schema: getModelSchemaRef(Deck, {
-            title: 'NewDeck',
-            
-          }),
-        },
-      },
-    })
-    deck: Deck,
-  ): Promise<Deck> {
-    return this.deckRepository.create(deck);
+  async create(): Promise<CreateDeckResource> {
+    const deck = this.deckService.generateNewDeck();
+    const savedDeck = await this.deckRepository.create(deck);
+    return new CreateDeckResource(savedDeck);
   }
 
-  @get('/decks/count')
-  @response(200, {
-    description: 'Deck model count',
-    content: {'application/json': {schema: CountSchema}},
-  })
-  async count(
-    @param.where(Deck) where?: Where<Deck>,
-  ): Promise<Count> {
-    return this.deckRepository.count(where);
-  }
-
-  @get('/decks')
-  @response(200, {
-    description: 'Array of Deck model instances',
-    content: {
-      'application/json': {
-        schema: {
-          type: 'array',
-          items: getModelSchemaRef(Deck, {includeRelations: true}),
-        },
-      },
-    },
-  })
-  async find(
-    @param.filter(Deck) filter?: Filter<Deck>,
-  ): Promise<Deck[]> {
-    return this.deckRepository.find(filter);
-  }
-
-  @patch('/decks')
-  @response(200, {
-    description: 'Deck PATCH success count',
-    content: {'application/json': {schema: CountSchema}},
-  })
-  async updateAll(
-    @requestBody({
-      content: {
-        'application/json': {
-          schema: getModelSchemaRef(Deck, {partial: true}),
-        },
-      },
-    })
-    deck: Deck,
-    @param.where(Deck) where?: Where<Deck>,
-  ): Promise<Count> {
-    return this.deckRepository.updateAll(deck, where);
-  }
-
-  @get('/decks/{id}')
+  @get('/deck-open/{id}')
   @response(200, {
     description: 'Deck model instance',
     content: {
       'application/json': {
-        schema: getModelSchemaRef(Deck, {includeRelations: true}),
+        schema: getModelSchemaRef(Deck),
       },
     },
   })
-  async findById(
+  async openById(
     @param.path.string('id') id: string,
-    @param.filter(Deck, {exclude: 'where'}) filter?: FilterExcludingWhere<Deck>
-  ): Promise<Deck> {
-    return this.deckRepository.findById(id, filter);
+  ): Promise<OpenDeckResource> {
+    const deck = await this.deckRepository.findById(id);
+    return new OpenDeckResource(deck);
   }
 
-  @patch('/decks/{id}')
+  @patch('/deck-draw/{id}')
   @response(204, {
     description: 'Deck PATCH success',
+    content: {
+      'application/json': {
+        schema: getModelSchemaRef(Deck),
+      },
+    },
   })
   async updateById(
     @param.path.string('id') id: string,
     @requestBody({
       content: {
         'application/json': {
-          schema: getModelSchemaRef(Deck, {partial: true}),
+          schema: {
+            type: 'object',
+            properties: {
+              count: {type: 'number'},
+            }
+          },
         },
       },
+      required: true,
     })
-    deck: Deck,
-  ): Promise<void> {
-    await this.deckRepository.updateById(id, deck);
-  }
-
-  @put('/decks/{id}')
-  @response(204, {
-    description: 'Deck PUT success',
-  })
-  async replaceById(
-    @param.path.string('id') id: string,
-    @requestBody() deck: Deck,
-  ): Promise<void> {
-    await this.deckRepository.replaceById(id, deck);
-  }
-
-  @del('/decks/{id}')
-  @response(204, {
-    description: 'Deck DELETE success',
-  })
-  async deleteById(@param.path.string('id') id: string): Promise<void> {
-    await this.deckRepository.deleteById(id);
+    count: number,
+  ): Promise<DrawDeckResource> {
+    const deck: Deck = await this.deckRepository.findById(id);
+    const drawnObject = this.deckService.drawCardsFromDeck(deck, count);
+    await this.deckRepository.updateById(id, {cards: drawnObject.deck.cards});
+    return new DrawDeckResource(drawnObject.drawnCards);
   }
 }

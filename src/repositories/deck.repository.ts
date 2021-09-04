@@ -8,9 +8,7 @@ export class DeckRepository extends DefaultCrudRepository<
   typeof Deck.prototype.id,
   DeckRelations
 > {
-  constructor(
-    @inject('datasources.mysql') dataSource: MysqlDataSource,
-  ) {
+  constructor(@inject('datasources.mysql') dataSource: MysqlDataSource) {
     super(Deck, dataSource);
   }
 }
